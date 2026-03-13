@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AgriLive — Multimodal Farm Assistant</title>
+    <meta name="description"
+        content="Real-time AI-powered agricultural assistant for Kerala farmers. Get instant crop disease diagnosis and expert farming advice using voice and camera.">
+    <meta name="theme-color" content="#1a2f1e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" href="/static/logo.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <!-- ===== Camera Feed (Full-Bleed Background) ===== -->
+    <div id="cameraLayer">
+        <video id="webcamVideo" autoplay playsinline muted></video>
+        <canvas id="captureCanvas"></canvas>
+        <div id="videoPlaceholder">
+            <div class="placeholder-content">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+                    <circle cx="12" cy="13" r="3"/>
+                </svg>
+                <span>Tap Start to activate camera</span>
+            </div>
+        </div>
+        <!-- Camera Controls Overlay -->
+        <button id="btnSwitchCam" class="cam-overlay-btn cam-switch" onclick="switchCamera()" aria-label="Switch Camera">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/>
+                <path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5"/>
+                <polyline points="16 3 19 6 16 9"/>
+                <polyline points="8 15 5 18 8 21"/>
+            </svg>
+        </button>
+        <button id="btnSnapshot" class="cam-overlay-btn cam-snapshot" onclick="takeSnapshot()" aria-label="Analyze Crop">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>Analyze</span>
+        </button>
+    </div>
+
+    <!-- ===== Top Bar ===== -->
+    <header id="topBar">
+        <div class="top-bar-left">
+            <img src="/static/logo.png" alt="AgriLive" class="logo-small">
+            <div class="brand">
+                <h1>AgriLive</h1>
+                <span id="sessionTimer" class="timer">00:00</span>
+            </div>
+        </div>
+        <div id="statusIndicator" class="status-pill">
+            <span class="status-dot"></span>
+            <span id="statusText">Offline</span>
+        </div>
+    </header>
+
+    <!-- ===== Crop Analysis Result Overlay ===== -->
+    <div id="analysisOverlay" class="analysis-overlay hidden">
+        <div class="analysis-card">
+            <button class="analysis-close" onclick="closeAnalysis()">✕</button>
+            <h2 class="analysis-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                Crop Analysis
+            </h2>
+            <div id="analysisContent" class="analysis-body">
+                <div class="analysis-loading">
+                    <div class="spinner"></div>
+                    <span>Analyzing your crop…</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Bottom Sheet — Transcript Drawer ===== -->
+    <div id="bottomSheet" class="bottom-sheet">
+        <div id="sheetHandle" class="sheet-handle">
+            <div class="handle-bar"></div>
+            <span class="sheet-label">Conversation</span>
+        </div>
+        <div id="transcript" class="transcript-scroll">
+            <div id="emptyState" class="empty-state">
+                <div class="empty-suggestions">
+                    <span class="empty-tagline">Start a session, then try:</span>
+                    <div class="suggestion-chips">
+                        <button class="chip" onclick="sendSuggestion('What pests are common in Wayanad this season?')">🐛 Pest alerts in Wayanad</button>
+                        <button class="chip" onclick="sendSuggestion('Show me your crop and I will diagnose it')">🌿 Diagnose my crop</button>
+                        <button class="chip" onclick="sendSuggestion('What is the weather forecast for Malappuram?')">🌦️ Weather in Malappuram</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Bottom Controls ===== -->
+    <div id="controlBar" class="control-bar">
+        <button id="btnStart" class="mic-btn mic-start" onclick="startSession()" aria-label="Start Session">
+            <div class="mic-pulse-ring"></div>
+            <div class="mic-inner">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                </svg>
+            </div>
+        </button>
+        <button id="btnStop" class="mic-btn mic-stop" onclick="stopSession()" disabled aria-label="End Session">
+            <div class="mic-inner">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="6" width="12" height="12" rx="2"/>
+                </svg>
+            </div>
+        </button>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>
