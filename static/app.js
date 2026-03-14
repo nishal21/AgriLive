@@ -28,7 +28,7 @@ let currentFacingMode = "environment";
 let activeAudioSources = [];
 let audioQueue = [];
 let isPlaybackStarted = false;
-const JITTER_BUFFER_THRESHOLD = 3;
+const JITTER_BUFFER_THRESHOLD = 10;
 
 // Reconnect state
 let reconnectAttempts = 0;
@@ -177,7 +177,7 @@ function playAudioChunk(pcmBase64) {
         nextPlayTime = audioContext.currentTime + 0.05; // Small initial offset
         scheduleNextBuffer();
     }
-    
+
     // Pulse the mic button when AI speaks
     btnStart.classList.add("speaking");
 }
@@ -252,12 +252,15 @@ async function startMicrophone() {
     const source = micAudioCtx.createMediaStreamSource(micStream);
     const actualRate = micAudioCtx.sampleRate;
 
-    const bufferSize = 512;
+    const bufferSize = 4096;
     micProcessor = micAudioCtx.createScriptProcessor(bufferSize, 1, 1);
     micProcessor._audioCtx = micAudioCtx;
 
     micProcessor.onaudioprocess = (event) => {
         if (!isSessionActive || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+        // FIX: Mute the mic while the AI is speaking to prevent accidental interruptions
+        if (btnStart.classList.contains("speaking")) return;
 
         let inputData = event.inputBuffer.getChannelData(0);
         if (actualRate !== MIC_SAMPLE_RATE) {
