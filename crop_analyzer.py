@@ -17,7 +17,13 @@ from google.genai import types
 logger = logging.getLogger("agrilive.analyzer")
 
 # Models to try in order of "intelligence" and availability
-MODELS_TO_TRY = ["gemini-2.0-flash-exp", "gemini-2.0-flash", "gemini-1.5-pro-002", "gemini-1.5-flash-001"]
+MODELS_TO_TRY = [
+    "gemini-2.5-flash", 
+    "gemini-2.0-flash-exp", 
+    "gemini-2.0-flash", 
+    "gemini-1.5-pro-002", 
+    "gemini-1.5-flash-001"
+]
 
 class CropDiagnosis(BaseModel):
     species: str = Field(description="Common name of the plant/crop")
