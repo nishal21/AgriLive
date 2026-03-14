@@ -261,11 +261,14 @@ async function startMicrophone() {
 
         let inputData = event.inputBuffer.getChannelData(0);
 
-        // FIX 1: Send pure silence if the AI is speaking so Vertex AI doesn't drop us!
+        // FIX 1: ALWAYS downsample first so the array size is correct!
+        if (actualRate !== MIC_SAMPLE_RATE) {
+            inputData = downsample(inputData, actualRate, MIC_SAMPLE_RATE);
+        }
+
+        // FIX 2: Now that it is the correct size, mute it if the AI is speaking
         if (btnStart.classList.contains("speaking")) {
             inputData = new Float32Array(inputData.length); // Array of zeros
-        } else if (actualRate !== MIC_SAMPLE_RATE) {
-            inputData = downsample(inputData, actualRate, MIC_SAMPLE_RATE);
         }
 
         const pcm16 = float32ToInt16(inputData);
@@ -582,7 +585,16 @@ function connectWebSocket() {
 
                     reconnectTimeout = setTimeout(async () => {
                         try {
+                            // FIX 3: Turn off the dead hardware
+                            stopMicrophone();
+                            stopWebcam();
+
                             await connectWebSocket();
+
+                            // FIX 4: Turn on fresh hardware for the new session
+                            await startMicrophone();
+                            await startWebcam();
+
                             addMessage("system", "✅ Reconnected to AgriBot!");
                         } catch (err) {
                             console.error("Reconnect failed:", err);
