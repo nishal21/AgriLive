@@ -28,7 +28,7 @@ let currentFacingMode = "environment";
 let activeAudioSources = [];
 let audioQueue = [];
 let isPlaybackStarted = false;
-const JITTER_BUFFER_THRESHOLD = 10;
+const JITTER_BUFFER_THRESHOLD = 3;
 
 // Reconnect state
 let reconnectAttempts = 0;
@@ -248,6 +248,7 @@ async function startMicrophone() {
     const micAudioCtx = new (window.AudioContext || window.webkitAudioContext)({
         sampleRate: MIC_SAMPLE_RATE,
     });
+    await micAudioCtx.resume();
 
     const source = micAudioCtx.createMediaStreamSource(micStream);
     const actualRate = micAudioCtx.sampleRate;
@@ -513,6 +514,13 @@ function connectWebSocket() {
         ws.onopen = () => {
             console.log("[WS] Connected");
             reconnectAttempts = 0;
+            // NEW: Client-to-server heartbeat to keep proxies alive
+            if (window._pingInterval) clearInterval(window._pingInterval);
+            window._pingInterval = setInterval(() => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: "ping" }));
+                }
+            }, 10000);
         };
 
         ws.onmessage = (event) => {
@@ -640,6 +648,7 @@ async function startSession() {
         audioContext = new (window.AudioContext || window.webkitAudioContext)({
             sampleRate: PLAYBACK_SAMPLE_RATE,
         });
+        await audioContext.resume();
         nextPlayTime = 0;
 
         await connectWebSocket();
@@ -676,7 +685,10 @@ function cleanupSession() {
         reconnectTimeout = null;
     }
 
-    if (ws) {
+        if (window._pingInterval) {
+            clearInterval(window._pingInterval);
+            window._pingInterval = null;
+        }
         ws.close();
         ws = null;
     }

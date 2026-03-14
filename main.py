@@ -166,6 +166,10 @@ async def websocket_endpoint(ws: WebSocket):
                         elif msg_type == "text":
                             await client.send_text(data)
 
+                        elif msg_type == "ping":
+                            # Client-to-server heartbeat
+                            pass
+
                         else:
                             logger.warning("Unknown message type from client: %s", msg_type)
 
