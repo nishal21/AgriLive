@@ -28,7 +28,7 @@ let currentFacingMode = "environment";
 let activeAudioSources = [];
 let audioQueue = [];
 let isPlaybackStarted = false;
-const JITTER_BUFFER_THRESHOLD = 5;
+const JITTER_BUFFER_THRESHOLD = 12;
 
 // Reconnect state
 let reconnectAttempts = 0;
@@ -197,7 +197,8 @@ function scheduleNextBuffer() {
             if (audioQueue.length === 0 && !isPlaybackStarted) {
                 btnStart.classList.remove("speaking");
             }
-        }, 300);
+        // FIX: Increase this from 300 to 1500 to survive network lag without unmuting!
+        }, 1500); 
         return;
     }
 
