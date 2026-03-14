@@ -437,6 +437,16 @@ async function takeSnapshot() {
 }
 
 function renderAnalysisResult(data) {
+    // FIX: Intercept a null or undefined payload
+    if (!data) {
+        data = {
+            species: "Unknown",
+            disease: "Could not analyze image",
+            confidence_score: 0,
+            organic_remedies: []
+        };
+    }
+
     const confidence = data.confidence_score || 0;
     const disease = data.disease || "None detected";
     const species = data.species || "Unknown";

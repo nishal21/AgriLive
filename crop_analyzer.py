@@ -82,9 +82,13 @@ async def analyze_crop_image(image_b64: str) -> dict:
             ),
         )
 
-        # Use response.parsed which handles the Pydantic conversion automatically
+        # Use response.parsed
         result = response.parsed
         
+        # FIX: Check if the AI returned None and force the fallback if it did
+        if result is None:
+            raise ValueError("Gemini returned an empty parsed response.")
+            
         if hasattr(result, "model_dump"):
             return result.model_dump()
         return result
@@ -93,7 +97,7 @@ async def analyze_crop_image(image_b64: str) -> dict:
         logger.error("Crop analysis or parsing failed: %s", exc)
         return {
             "species": "Unknown",
-            "disease": None,
+            "disease": "Could not analyze image",
             "confidence_score": 0,
             "organic_remedies": [],
         }
