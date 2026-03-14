@@ -46,59 +46,74 @@ AgriLive focuses on **40% UX/UI and Innovation**, transforming the smartphone in
 
 ```mermaid
 ---
-title: Intelligent Crop Analysis Flow
-config:
-  layout: dagre
-  look: classic
-  theme: neutral
----
-flowchart LR
-    %% Client Side
-    subgraph Client["Client Side"]
+%%{init: {"flowchart": {"curve": "basis"}} }%%
+flowchart TD
+    %% ----------------------------------
+    %% High-contrast earthy theme
+    classDef frontend fill:#214D27,stroke:#4ABF76,stroke-width:2px,color:#FAF9F6,font-weight:bold,font-size:13px;
+    classDef cloud fill:#2C3E34,stroke:#F4A261,stroke-width:2px,color:#FFF8E7,font-weight:bold,font-size:13px;
+    classDef vertex fill:#1E3529,stroke:#90BE6D,stroke-width:2px,color:#F0F0F0,font-weight:bold,font-size:13px;
+    classDef external fill:#FFF4E6,stroke:#BC6C25,stroke-width:2px,color:#1B2F1E,font-weight:bold,font-size:13px;
+    classDef process fill:#FFFADD,stroke:#4ABF76,stroke-width:2px,font-weight:bold;
+    linkStyle default stroke-width:2px,stroke:#A6A6A6
+
+    %% ----------------------------------
+    %% 1️⃣ Frontend Layer
+    subgraph Client["📱 FIELD COMPANION (Frontend)"]
         direction TB
-        UI@{ label: "User Interface" }
-        Cam@{ label: "Camera Input" }
-        Mic@{ label: "Microphone\n(16 kHz PCM Audio)" }
-        Speaker@{ label: "Speaker Output" }
+        UI["UI & Controls<br/><sub>HTML / CSS / JS</sub>"]:::frontend
+        Mic["Microphone Stream<br/><sub>16 kHz PCM</sub>"]:::frontend
+        Cam["Webcam Capture<br/><sub>1 FPS JPEG</sub>"]:::frontend
+        Spk["Audio Playback<br/><sub>24 kHz PCM + Jitter Buffer</sub>"]:::frontend
     end
 
-    %% Cloud Platform
-    subgraph Cloud["Google Cloud Platform"]
+    %% ----------------------------------
+    %% 2️⃣ Cloud Run Backend
+    subgraph CloudRun["☁️ GOOGLE CLOUD RUN"]
         direction TB
-        CR@{ label: "Cloud Relay (CR)\nStateful Orchestration" }
-
-        subgraph VertexAI["Vertex AI — Cognitive Layer"]
-            direction TB
-            LiveAgent@{ label: "LiveAgent\nReal‑time Cognitive Control" }
-            AsyncAgent@{ label: "Crop Analysis Agent\n(gemini‑2.0‑flash‑exp)" }
-        end
+        WS["WebSocket Bridge<br/><sub>3600 s Timeout + Heartbeat</sub>"]:::cloud
+        API["REST API<br/><sub>/api/analyze</sub>"]:::cloud
+        Fallback["Fallback Engine<br/><sub>Pydantic Parser</sub>"]:::cloud
     end
 
-    %% External Tool Use
-    subgraph WebTools["Live Internet Tool Use"]
-        Grounding@{ label: "Grounding Search\nExternal Knowledge Access" }
+    %% ----------------------------------
+    %% 3️⃣ Vertex AI
+    subgraph VertexAI["🧠 VERTEX AI (Cognitive Layer)"]
+        direction TB
+        LiveModel["Live Agent<br/><sub>gemini-live-2.5 audio</sub>"]:::vertex
+        VisionModel["Vision Agent<br/><sub>gemini-2.0 vision-exp</sub>"]:::vertex
     end
 
-    %% Data Flows
-    UI <-->|"Stateful WebSockets w/ Backoff"| CR
-    Cam -->|"Visual Stream"| CR
-    Mic -->|"Audio Input"| CR
-    CR -->|"Synthesized Audio"| Speaker
-    UI -->|"HTTPS POST /api/analyze"| CR
-    CR <-->|"Bidirectional WSS Stream"| LiveAgent
-    CR -->|"REST Payload"| AsyncAgent
-    LiveAgent <-->|"Autonomous Query"| Grounding
+    %% ----------------------------------
+    %% 4️⃣ External Context Layer
+    Search["🔍 Google Search Grounding<br/><sub>Weather / Agri Data</sub>"]:::external
 
-    %% Styling Classes
-    classDef client fill:#e8f5e9,stroke:#34a853,stroke-width:2px,color:#000;
-    classDef cloud fill:#e3f2fd,stroke:#4285f4,stroke-width:2px,color:#000;
-    classDef ai fill:#fce4ec,stroke:#ea4335,stroke-width:2px,color:#000;
-    classDef ext fill:#f3e5f5,stroke:#8e24aa,stroke-width:2px,color:#000;
+    %% ----------------------------------
+    %% Flow Connections
+    UI -->|"Control + Transcripts"| WS
+    Mic -->|"Audio Stream (WebSocket)"| WS
+    Cam -->|"Single Frame Capture (HTTPS)"| API
+    WS -->|"Buffered Playback"| Spk
 
-    class UI,Cam,Mic,Speaker client;
-    class CR,Cloud cloud;
-    class LiveAgent,AsyncAgent ai;
-    class Grounding ext;
+    WS -->|"Bidirectional AI Stream"| LiveModel
+    API -->|"Fallback Trigger"| Fallback
+    Fallback -->|"Structured Requests"| VisionModel
+    VisionModel -->|"Parsed Results"| Fallback
+    LiveModel -->|"Knowledge Lookup"| Search
+    Search -->|"Real-time Context"| LiveModel
+    LiveModel -->|"AI Responses"| WS
+
+    %% ----------------------------------
+    %% Narrative Summary (Readable captions)
+    step1["👩‍🌾 User Interaction"]:::process
+    step2["☁️ Cloud Processing"]:::process
+    step3["🧠 AI Reasoning"]:::process
+    step4["🌦️ Grounded Knowledge"]:::process
+    step5["🔊 Response Delivery"]:::process
+
+    %% Connect summary steps vertically
+    step1 --> Client
+    Client --> step2 --> CloudRun --> step3 --> VertexAI --> step4 --> Search --> step5 --> Spk
 ```
 
 
