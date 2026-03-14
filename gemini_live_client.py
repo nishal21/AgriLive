@@ -77,7 +77,10 @@ class GeminiLiveClient:
     async def connect(self):
         """Establish the Live API session and yield when ready."""
         config = types.LiveConnectConfig(
-            response_modalities=["AUDIO", "TEXT"],
+            # FIX 1: Vertex AI only allows one primary modality. Revert this to AUDIO.
+            response_modalities=["AUDIO"],
+            # FIX 2: Tell the server to transcribe its own voice
+            output_audio_transcription=types.AudioTranscriptionConfig(),
             system_instruction=types.Content(
                 parts=[types.Part(text=SYSTEM_INSTRUCTION)]
             ),
@@ -147,6 +150,10 @@ class GeminiLiveClient:
             return
 
         logger.info("Starting receive loop...")
+
+        # FIX 3: Accumulate text chunks so we don't spam the UI with empty bubbles
+        current_transcript = ""
+
         try:
             while True:
                 try:
@@ -154,8 +161,15 @@ class GeminiLiveClient:
                         # --- Server content (audio / text) ---
                         if message.server_content:
                             sc = message.server_content
+
                             if sc.interrupted:
                                 yield {"type": "interrupted"}
+                                # Optional UI polish: show interrupted text with an ellipsis
+                                if current_transcript.strip():
+                                    yield {"type": "text", "data": current_transcript.strip() + "..."}
+                                current_transcript = ""
+
+                            # Handle incoming audio
                             if sc.model_turn and sc.model_turn.parts:
                                 for part in sc.model_turn.parts:
                                     if part.inline_data and part.inline_data.data:
@@ -163,10 +177,19 @@ class GeminiLiveClient:
                                             "type": "audio",
                                             "data": part.inline_data.data,
                                         }
-                                    if part.text:
-                                        yield {"type": "text", "data": part.text}
+                                    if hasattr(part, "text") and part.text:
+                                        current_transcript += part.text
+
+                            # Catch the built-in transcription chunks
+                            if hasattr(sc, "output_transcription") and sc.output_transcription:
+                                if hasattr(sc.output_transcription, "text") and sc.output_transcription.text:
+                                    current_transcript += sc.output_transcription.text
 
                             if sc.turn_complete:
+                                # Send the full sentence to the frontend as one neat bubble!
+                                if current_transcript.strip():
+                                    yield {"type": "text", "data": current_transcript.strip()}
+                                    current_transcript = ""
                                 yield {"type": "turn_complete"}
                 except Exception as exc:
                     logger.warning("Session receive ended or connection dropped: %s", exc)
