@@ -28,7 +28,7 @@ let currentFacingMode = "environment";
 let activeAudioSources = [];
 let audioQueue = [];
 let isPlaybackStarted = false;
-const JITTER_BUFFER_THRESHOLD = 3;
+const JITTER_BUFFER_THRESHOLD = 12;
 
 // Reconnect state
 let reconnectAttempts = 0;
@@ -174,7 +174,7 @@ function playAudioChunk(pcmBase64) {
     // Initial trigger: wait for 3 chunks
     if (!isPlaybackStarted && audioQueue.length >= JITTER_BUFFER_THRESHOLD) {
         isPlaybackStarted = true;
-        nextPlayTime = audioContext.currentTime + 0.05; // Small initial offset
+        nextPlayTime = audioContext.currentTime + 0.25; // Professional offset to mask jitter
         scheduleNextBuffer();
     }
 
@@ -205,7 +205,7 @@ function scheduleNextBuffer() {
     // Schedule seamlessly
     const now = audioContext.currentTime;
     if (nextPlayTime < now) {
-        nextPlayTime = now + 0.01;
+        nextPlayTime = now + 0.15; // Catch-up offset
     }
 
     source.onended = () => {
