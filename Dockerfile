@@ -15,7 +15,7 @@ WORKDIR /app
 # Copy installed packages from builder
 COPY --from=builder /install /usr/local
 
-# FIX: Copy everything in the directory to ensure all modules are present
+# FIX: Copy ALL files in the directory to ensure crop_analyzer.py is included
 COPY..
 
 # Cloud Run uses PORT env var (defaults to 8080)
