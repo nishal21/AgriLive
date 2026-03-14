@@ -26,6 +26,9 @@ let nextPlayTime = 0;
 
 let currentFacingMode = "environment";
 let activeAudioSources = [];
+let audioQueue = [];
+let isPlaybackStarted = false;
+const JITTER_BUFFER_THRESHOLD = 3;
 
 // Reconnect state
 let reconnectAttempts = 0;
@@ -153,7 +156,7 @@ function stopSessionTimer() {
 }
 
 // ========================================================================
-// Audio Playback (24 kHz PCM from server)
+// Audio Playback (24 kHz PCM from server with Jitter Buffer)
 // ========================================================================
 function playAudioChunk(pcmBase64) {
     if (!audioContext) return;
@@ -165,6 +168,33 @@ function playAudioChunk(pcmBase64) {
         float32[i] = int16[i] / 32768;
     }
 
+    // Push to jitter buffer
+    audioQueue.push(float32);
+
+    // Initial trigger: wait for 3 chunks
+    if (!isPlaybackStarted && audioQueue.length >= JITTER_BUFFER_THRESHOLD) {
+        isPlaybackStarted = true;
+        nextPlayTime = audioContext.currentTime + 0.05; // Small initial offset
+        scheduleNextBuffer();
+    }
+    
+    // Pulse the mic button when AI speaks
+    btnStart.classList.add("speaking");
+}
+
+function scheduleNextBuffer() {
+    if (!isSessionActive || !audioContext || audioQueue.length === 0) {
+        if (audioQueue.length === 0) {
+            isPlaybackStarted = false;
+            // We don't remove 'speaking' class here immediately to allow for small gaps
+            setTimeout(() => {
+                if (audioQueue.length === 0) btnStart.classList.remove("speaking");
+            }, 200);
+        }
+        return;
+    }
+
+    const float32 = audioQueue.shift();
     const audioBuffer = audioContext.createBuffer(1, float32.length, PLAYBACK_SAMPLE_RATE);
     audioBuffer.getChannelData(0).set(float32);
 
@@ -172,25 +202,21 @@ function playAudioChunk(pcmBase64) {
     source.buffer = audioBuffer;
     source.connect(audioContext.destination);
 
+    // Schedule seamlessly
     const now = audioContext.currentTime;
     if (nextPlayTime < now) {
-        nextPlayTime = now + 0.02;
+        nextPlayTime = now + 0.01;
     }
 
     source.onended = () => {
         const index = activeAudioSources.indexOf(source);
         if (index > -1) activeAudioSources.splice(index, 1);
-        if (activeAudioSources.length === 0) {
-            btnStart.classList.remove("speaking");
-        }
+        scheduleNextBuffer(); // Chain the next buffer
     };
-    activeAudioSources.push(source);
 
+    activeAudioSources.push(source);
     source.start(nextPlayTime);
     nextPlayTime += audioBuffer.duration;
-
-    // Pulse the mic button when AI speaks
-    btnStart.classList.add("speaking");
 }
 
 function flushAudioPlayback() {
@@ -198,6 +224,8 @@ function flushAudioPlayback() {
         try { source.stop(); } catch (e) { }
     });
     activeAudioSources = [];
+    audioQueue = [];
+    isPlaybackStarted = false;
     if (audioContext) {
         nextPlayTime = audioContext.currentTime;
     }
