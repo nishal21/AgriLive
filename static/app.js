@@ -28,7 +28,7 @@ let currentFacingMode = "environment";
 let activeAudioSources = [];
 let audioQueue = [];
 let isPlaybackStarted = false;
-const JITTER_BUFFER_THRESHOLD = 12;
+const JITTER_BUFFER_THRESHOLD = 5;
 
 // Reconnect state
 let reconnectAttempts = 0;
@@ -171,52 +171,68 @@ function playAudioChunk(pcmBase64) {
     // Push to jitter buffer
     audioQueue.push(float32);
 
-    // Initial trigger: wait for 3 chunks
-    if (!isPlaybackStarted && audioQueue.length >= JITTER_BUFFER_THRESHOLD) {
-        isPlaybackStarted = true;
-        nextPlayTime = audioContext.currentTime + 0.25; // Professional offset to mask jitter
-        scheduleNextBuffer();
+    // Initial trigger or re-entry after underflow
+    if (!isPlaybackStarted && (audioQueue.length >= JITTER_BUFFER_THRESHOLD)) {
+        startPlaybackLoop();
     }
 
     // Pulse the mic button when AI speaks
     btnStart.classList.add("speaking");
 }
 
+function startPlaybackLoop() {
+    isPlaybackStarted = true;
+    // Set first playback slightly in the future
+    nextPlayTime = audioContext.currentTime + 0.2; 
+    scheduleNextBuffer();
+}
+
 function scheduleNextBuffer() {
-    if (!isSessionActive || !audioContext || audioQueue.length === 0) {
-        if (audioQueue.length === 0) {
-            isPlaybackStarted = false;
-            // We don't remove 'speaking' class here immediately to allow for small gaps
-            setTimeout(() => {
-                if (audioQueue.length === 0) btnStart.classList.remove("speaking");
-            }, 200);
-        }
+    if (!isSessionActive || !audioContext) return;
+
+    // If we have nothing left, we stop the "started" state so new arrivals can trigger it
+    if (audioQueue.length === 0) {
+        isPlaybackStarted = false;
+        setTimeout(() => {
+            if (audioQueue.length === 0 && !isPlaybackStarted) {
+                btnStart.classList.remove("speaking");
+            }
+        }, 300);
         return;
     }
 
-    const float32 = audioQueue.shift();
-    const audioBuffer = audioContext.createBuffer(1, float32.length, PLAYBACK_SAMPLE_RATE);
-    audioBuffer.getChannelData(0).set(float32);
+    // Proactively schedule as much as we have!
+    while (audioQueue.length > 0) {
+        const float32 = audioQueue.shift();
+        const audioBuffer = audioContext.createBuffer(1, float32.length, PLAYBACK_SAMPLE_RATE);
+        audioBuffer.getChannelData(0).set(float32);
 
-    const source = audioContext.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(audioContext.destination);
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContext.destination);
 
-    // Schedule seamlessly
-    const now = audioContext.currentTime;
-    if (nextPlayTime < now) {
-        nextPlayTime = now + 0.15; // Catch-up offset
+        // Gapless scheduling
+        const now = audioContext.currentTime;
+        if (nextPlayTime < now) {
+            nextPlayTime = now + 0.05; // Emergency resync
+        }
+
+        source.onended = () => {
+            const index = activeAudioSources.indexOf(source);
+            if (index > -1) activeAudioSources.splice(index, 1);
+            // If we are about to run out of scheduled audio, check for more
+            if (activeAudioSources.length === 0) {
+                scheduleNextBuffer();
+            }
+        };
+
+        activeAudioSources.push(source);
+        source.start(nextPlayTime);
+        nextPlayTime += audioBuffer.duration;
+        
+        // Don't schedule too far ahead (max 1 second) to maintain responsiveness
+        if (nextPlayTime > now + 1.0) break;
     }
-
-    source.onended = () => {
-        const index = activeAudioSources.indexOf(source);
-        if (index > -1) activeAudioSources.splice(index, 1);
-        scheduleNextBuffer(); // Chain the next buffer
-    };
-
-    activeAudioSources.push(source);
-    source.start(nextPlayTime);
-    nextPlayTime += audioBuffer.duration;
 }
 
 function flushAudioPlayback() {
@@ -226,9 +242,6 @@ function flushAudioPlayback() {
     activeAudioSources = [];
     audioQueue = [];
     isPlaybackStarted = false;
-    if (audioContext) {
-        nextPlayTime = audioContext.currentTime;
-    }
     btnStart.classList.remove("speaking");
 }
 
@@ -556,11 +569,9 @@ function connectWebSocket() {
 
                     case "turn_complete":
                         console.log("[AgriBot] Turn complete.");
-                        // FIX 2: Force playback to start if it was a short sentence
+                        // Force playback if anything is left in the queue
                         if (!isPlaybackStarted && audioQueue.length > 0) {
-                            isPlaybackStarted = true;
-                            nextPlayTime = audioContext.currentTime + 0.01;
-                            scheduleNextBuffer();
+                            startPlaybackLoop();
                         }
                         break;
 
