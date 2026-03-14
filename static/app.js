@@ -171,8 +171,11 @@ function playAudioChunk(pcmBase64) {
     // Push to jitter buffer
     audioQueue.push(float32);
 
-    // Initial trigger or re-entry after underflow
-    if (!isPlaybackStarted && (audioQueue.length >= JITTER_BUFFER_THRESHOLD)) {
+    // FIX: Check if the AI was already talking before the network lagged
+    const isMidSentence = btnStart.classList.contains("speaking");
+
+    // Initial trigger OR fast-track re-entry if we are mid-sentence
+    if (!isPlaybackStarted && (audioQueue.length >= JITTER_BUFFER_THRESHOLD || isMidSentence)) {
         startPlaybackLoop();
     }
 
