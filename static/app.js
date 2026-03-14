@@ -389,34 +389,57 @@ async function switchCamera() {
 // Crop Analysis (REST endpoint)
 // ========================================================================
 async function takeSnapshot() {
-    if (!isSessionActive || !webcamStream) {
-        addMessage("system", "⚠️ Start a session first to analyze crops.");
-        return;
-    }
-
+    console.log("[AgriLive] Analyse button clicked.");
     haptic([30, 50, 30]);
 
-    // Capture frame
-    const ctx = captureCanvas.getContext("2d");
-    captureCanvas.width = webcamVideo.videoWidth || 640;
-    captureCanvas.height = webcamVideo.videoHeight || 480;
-    ctx.drawImage(webcamVideo, 0, 0, captureCanvas.width, captureCanvas.height);
-
-    // Pause video to show the captured frame
-    webcamVideo.pause();
-
-    // Show overlay with loading state
+    // Show overlay IMMEDIATELY to give feedback
     analysisOverlay.classList.remove("hidden");
     analysisContent.innerHTML = `
         <div class="analysis-loading">
             <div class="spinner"></div>
-            <span>Analyzing your crop…</span>
+            <span>Preparing analysis…</span>
         </div>
     `;
+
+    if (!isSessionActive) {
+        analysisContent.innerHTML = `
+            <div style="text-align:center; padding: 16px 0; color: var(--danger);">
+                <p style="font-weight: 600;">Session not active</p>
+                <p style="font-size: 0.78rem; margin-top: 6px; color: var(--text-muted);">Please tap the microphone button to start a session first.</p>
+            </div>
+        `;
+        return;
+    }
+
+    if (!webcamStream) {
+        analysisContent.innerHTML = `
+            <div style="text-align:center; padding: 16px 0; color: var(--danger);">
+                <p style="font-weight: 600;">Camera not active</p>
+                <p style="font-size: 0.78rem; margin-top: 6px; color: var(--text-muted);">Crop analysis requires camera access. Please ensure your camera is enabled.</p>
+            </div>
+        `;
+        return;
+    }
 
     setStatus("analyzing", "Analyzing…");
 
     try {
+        // Capture frame
+        const ctx = captureCanvas.getContext("2d");
+        captureCanvas.width = webcamVideo.videoWidth || 640;
+        captureCanvas.height = webcamVideo.videoHeight || 480;
+        ctx.drawImage(webcamVideo, 0, 0, captureCanvas.width, captureCanvas.height);
+
+        // Pause video to show the captured frame
+        webcamVideo.pause();
+
+        analysisContent.innerHTML = `
+            <div class="analysis-loading">
+                <div class="spinner"></div>
+                <span>Diagnosing your crop…</span>
+            </div>
+        `;
+
         const blob = await new Promise((resolve) =>
             captureCanvas.toBlob(resolve, "image/jpeg", 0.85)
         );
@@ -428,6 +451,7 @@ async function takeSnapshot() {
             reader.readAsDataURL(blob);
         });
 
+        console.log("[AgriLive] Sending image for analysis...");
         const response = await fetch("/api/analyze", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -435,14 +459,15 @@ async function takeSnapshot() {
         });
 
         if (!response.ok) {
-            throw new Error(`Server returned ${response.status}`);
+            throw new Error(`Server error: ${response.status}`);
         }
 
         const result = await response.json();
+        console.log("[AgriLive] Analysis result received:", result);
         renderAnalysisResult(result);
         haptic(50);
     } catch (err) {
-        console.error("Analysis failed:", err);
+        console.error("Analysis execution failed:", err);
         haptic([100, 50, 100]);
         analysisContent.innerHTML = `
             <div style="text-align:center; padding: 16px 0; color: var(--danger);">
