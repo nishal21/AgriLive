@@ -76,26 +76,28 @@ class GeminiLiveClient:
     @contextlib.asynccontextmanager
     async def connect(self):
         """Establish the Live API session and yield when ready."""
-        # FIX: Drop strict types and use a raw dictionary to bypass SDK version crashes
-        config = {
-            "response_modalities": ["AUDIO"],
-            "output_audio_transcription": {},
-            "system_instruction": {
-                "parts": [{"text": SYSTEM_INSTRUCTION}]
-            },
-            "tools": LIVE_TOOLS,
-        }
-        async with self._client.aio.live.connect(
-            model=MODEL_ID,
-            config=config,
-        ) as session:
-            self._session = session
-            logger.info("Gemini Live session connected.")
-            try:
-                yield self
-            finally:
-                self._session = None
-                logger.info("Gemini Live session closed.")
+        
+        # Use the formal types.LiveConnectConfig to avoid validation errors
+        config = types.LiveConnectConfig(
+            response_modalities=["AUDIO"],
+            # This must be the specific AudioTranscriptionConfig object
+            output_audio_transcription=types.AudioTranscriptionConfig(
+                model="latest" # Explicitly setting the model helps stability
+            ),
+            system_instruction=types.Content(
+                parts=[types.Part(text=SYSTEM_INSTRUCTION)]
+            ),
+            tools=LIVE_TOOLS,
+        )
+
+        try:
+            async with self._client.aio.live.connect(model=MODEL_ID, config=config) as session:
+                self._session = session
+                logger.info("Gemini Live session connected.")
+                yield
+        except Exception as e:
+            logger.error(f"Failed to establish Gemini Live connection: {e}")
+            raise
 
     async def send_audio(self, pcm_data: bytes) -> None:
         """Send a chunk of raw 16-bit PCM 16 kHz audio to the live session."""
