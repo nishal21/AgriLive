@@ -238,7 +238,9 @@ async function startMicrophone() {
 
         const pcm16 = float32ToInt16(inputData);
         const b64 = arrayBufferToBase64(pcm16);
-        ws.send(JSON.stringify({ type: "audio", data: b64 }));
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: "audio", data: b64 }));
+        }
     };
 
     source.connect(micProcessor);
@@ -296,8 +298,10 @@ async function startWebcam() {
                 }
                 const reader = new FileReader();
                 reader.onloadend = () => {
-                    const b64 = reader.result.split(",")[1];
-                    ws.send(JSON.stringify({ type: "video", data: b64 }));
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        const b64 = reader.result.split(",")[1];
+                        ws.send(JSON.stringify({ type: "video", data: b64 }));
+                    }
                     isCapturing = false;
                 };
                 reader.onerror = () => {
