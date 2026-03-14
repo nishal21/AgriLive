@@ -8,15 +8,14 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # ---- Runtime stage ----
-FROM python:3.12-slim                    
-  
+FROM python:3.12-slim
 
 WORKDIR /app
 
 # Copy installed packages from builder
 COPY --from=builder /install /usr/local
 
-# FIX: Copy ALL application code to ensure crop_analyzer.py is included
+# FIX: Copy everything in the directory to ensure all modules are present
 COPY..
 
 # Cloud Run uses PORT env var (defaults to 8080)
