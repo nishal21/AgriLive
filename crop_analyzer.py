@@ -1,7 +1,7 @@
 """
 crop_analyzer.py — Async Crop Analysis Agent
 
-Uses Gemini 1.5 Pro (with Flash fallback) via Vertex AI to analyze a crop image 
+Uses Gemini 2.0 Flash (with 1.5 fallback) via Vertex AI to analyze a crop image 
 and return structured diagnosis data (species, disease, confidence, organic remedies).
 """
 import base64
@@ -16,8 +16,9 @@ from google.genai import types
 
 logger = logging.getLogger("agrilive.analyzer")
 
-# Models to try in order of "intelligence"
-MODELS_TO_TRY = ["gemini-1.5-pro-002", "gemini-1.5-pro", "gemini-1.5-flash-002", "gemini-1.5-flash"]
+# Models to try in order of "intelligence" and availability
+# gemini-2.0-flash is currently the most robust/intelligent available in most regions.
+MODELS_TO_TRY = ["gemini-2.0-flash", "gemini-1.5-pro-002", "gemini-1.5-flash-001", "gemini-1.5-pro", "gemini-1.5-flash"]
 
 class CropDiagnosis(BaseModel):
     species: str = Field(description="Common name of the plant/crop")
@@ -40,22 +41,21 @@ Rules:
 async def analyze_crop_image(image_b64: str) -> dict:
     """
     Analyze a base64-encoded JPEG image of a crop.
-    Attempts Pro first, then falls back to Flash if restricted or unavailable.
+    Attempts Gemini 2.0 Flash first, then falls back to 1.5 versions.
     """
     project = os.environ.get("GOOGLE_CLOUD_PROJECT")
     location = os.environ.get("GOOGLE_CLOUD_LOCATION") or "us-central1"
 
     logger.info("[Analyzer] System Check: Project=%s, Location=%s", project, location)
 
-    # Use v1 stable instead of v1beta1 to avoid model mismatch
     try:
+        # Standard initialization without forcing api_version
         client = genai.Client(
             vertexai=True,
             project=project,
-            location=location,
-            http_options={'api_version': 'v1'}
+            location=location
         )
-        logger.info("[Analyzer] Vertex AI Client (v1) initialized.")
+        logger.info("[Analyzer] Vertex AI Client initialized.")
     except Exception as e:
         logger.error("[Analyzer] Client init failed: %s", e)
         raise
@@ -66,7 +66,6 @@ async def analyze_crop_image(image_b64: str) -> dict:
             image_b64 = image_b64.split(",")[1]
         image_b64 = "".join(image_b64.split())
         image_bytes = base64.b64decode(image_b64)
-        logger.info("[Analyzer] Image decoded: %d bytes", len(image_bytes))
     except Exception as e:
         logger.error("[Analyzer] Decode failed: %s", e)
         raise
@@ -74,7 +73,7 @@ async def analyze_crop_image(image_b64: str) -> dict:
     last_error = None
     for model_id in MODELS_TO_TRY:
         try:
-            logger.info("[CropAnalyzer] Trying model: %s", model_id)
+            logger.info("[CropAnalyzer] Attempting diagnosis with: %s", model_id)
             response = await client.aio.models.generate_content(
                 model=model_id,
                 contents=[
@@ -99,9 +98,11 @@ async def analyze_crop_image(image_b64: str) -> dict:
                 ),
             )
 
+            # 1. Try standard parsing
             result = response.parsed
             raw_text = response.text if hasattr(response, 'text') else ""
             
+            # 2. Manual fallback if SDK parsing fails
             if result is None:
                 logger.warning("[CropAnalyzer] SDK parsing failed, trying manual JSON extraction")
                 json_match = re.search(r'\{.*\}', raw_text, re.DOTALL)
@@ -123,22 +124,9 @@ async def analyze_crop_image(image_b64: str) -> dict:
         except Exception as exc:
             logger.warning("[CropAnalyzer] Model %s failed: %s", model_id, exc)
             last_error = exc
-            
-            # If 404, quickly try the next model
-            if "404" in str(exc) or "NOT_FOUND" in str(exc):
-                continue
-            
-            # If other error, still try fallback
             continue
 
-    # Final Fallback Attempt: List models to log what's actually available
-    try:
-        logger.info("[Analyzer] DISCOVERY: Listing available models in this project...")
-        for m in client.models.list():
-            logger.info("  Available: %s", m.name)
-    except:
-        pass
-
+    # Final Failure Mode
     logger.error("[CropAnalyzer] All analysis tiers failed. Last error: %s", last_error)
     return {
         "species": "Unknown",
