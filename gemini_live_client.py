@@ -77,7 +77,7 @@ class GeminiLiveClient:
     async def connect(self):
         """Establish the Live API session and yield when ready."""
         config = types.LiveConnectConfig(
-            response_modalities=["AUDIO"],
+            response_modalities=["AUDIO", "TEXT"],
             system_instruction=types.Content(
                 parts=[types.Part(text=SYSTEM_INSTRUCTION)]
             ),
