@@ -463,11 +463,12 @@ async function takeSnapshot() {
         }
 
         const result = await response.json();
-        console.log("[AgriLive] Analysis result received:", result);
+        console.log("[AgriLive] Analysis response parsed:", JSON.stringify(result));
         renderAnalysisResult(result);
         haptic(50);
     } catch (err) {
-        console.error("Analysis execution failed:", err);
+        console.error("[AgriLive] Analysis execution FATAL error:", err);
+        alert("Analysis Error: " + err.message); // Visual confirmation
         haptic([100, 50, 100]);
         analysisContent.innerHTML = `
             <div style="text-align:center; padding: 16px 0; color: var(--danger);">
@@ -483,6 +484,7 @@ async function takeSnapshot() {
 }
 
 function renderAnalysisResult(data) {
+    console.log("[AgriLive] Rendering result UI...");
     // FIX: Intercept a null or undefined payload
     if (!data) {
         data = {
