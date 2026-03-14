@@ -48,13 +48,14 @@ async def analyze_crop_image(image_b64: str) -> dict:
     logger.info("[Analyzer] System Check: Project=%s, Location=%s", project, location)
 
     try:
-        # Standard initialization without forcing api_version
+        # FIX: Explicitly target v1beta1 so Vertex AI can find the preview models
         client = genai.Client(
             vertexai=True,
             project=project,
-            location=location
+            location=location,
+            http_options={'api_version': 'v1beta1'} 
         )
-        logger.info("[Analyzer] Vertex AI Client initialized.")
+        logger.info("[Analyzer] Vertex AI Client initialized (v1beta1).")
     except Exception as e:
         logger.error("[Analyzer] Client init failed: %s", e)
         raise
