@@ -14,7 +14,7 @@ from google.genai import types
 
 logger = logging.getLogger("agrilive.analyzer")
 
-ANALYSIS_MODEL = "gemini-1.5-pro"
+ANALYSIS_MODEL = "gemini-1.5-pro-002"
 
 class CropDiagnosis(BaseModel):
     species: str = Field(description="Common name of the plant/crop")
