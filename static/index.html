@@ -30,7 +30,7 @@
             </div>
         </div>
         <!-- Camera Controls Overlay -->
-        <button id="btnSwitchCam" class="cam-overlay-btn cam-switch" onclick="switchCamera()" aria-label="Switch Camera">
+        <button id="btnSwitchCam" class="cam-overlay-btn cam-switch" aria-label="Switch Camera">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/>
                 <path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5"/>
@@ -38,7 +38,7 @@
                 <polyline points="8 15 5 18 8 21"/>
             </svg>
         </button>
-        <button id="btnSnapshot" class="cam-overlay-btn cam-snapshot" onclick="takeSnapshot()" aria-label="Analyze Crop">
+        <button id="btnSnapshot" class="cam-overlay-btn cam-snapshot" aria-label="Analyze Crop">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"/>
                 <line x1="12" y1="8" x2="12" y2="12"/>
@@ -66,7 +66,7 @@
     <!-- ===== Crop Analysis Result Overlay ===== -->
     <div id="analysisOverlay" class="analysis-overlay hidden">
         <div class="analysis-card">
-            <button class="analysis-close" onclick="closeAnalysis()">✕</button>
+            <button id="btnAnalysisClose" class="analysis-close">✕</button>
             <h2 class="analysis-title">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 Crop Analysis
@@ -102,7 +102,7 @@
 
     <!-- ===== Bottom Controls ===== -->
     <div id="controlBar" class="control-bar">
-        <button id="btnStart" class="mic-btn mic-start" onclick="startSession()" aria-label="Start Session">
+        <button id="btnStart" class="mic-btn mic-start" aria-label="Start Session">
             <div class="mic-pulse-ring"></div>
             <div class="mic-inner">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
@@ -111,7 +111,7 @@
                 </svg>
             </div>
         </button>
-        <button id="btnStop" class="mic-btn mic-stop" onclick="stopSession()" disabled aria-label="End Session">
+        <button id="btnStop" class="mic-btn mic-stop" disabled aria-label="End Session">
             <div class="mic-inner">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                     <rect x="6" y="6" width="12" height="12" rx="2"/>
