@@ -1,7 +1,7 @@
 """
 crop_analyzer.py — Async Crop Analysis Agent
 
-Uses Gemini 2.0 Flash via Vertex AI to analyze a crop image and return
+Uses Gemini 2.5 Flash via Vertex AI to analyze a crop image and return
 structured diagnosis data (species, disease, confidence, organic remedies).
 """
 import base64
@@ -18,7 +18,7 @@ ANALYSIS_MODEL = "gemini-2.5-flash"
 
 class CropDiagnosis(BaseModel):
     species: str = Field(description="Common name of the plant/crop")
-    disease: str | None = Field(description="Specific disease/pest name, or null if healthy")
+    disease: str = Field(description="Specific disease/pest name, or 'None' if healthy") 
     confidence_score: int = Field(description="Confidence score between 0 and 100")
     organic_remedies: list[str] = Field(description="List of practical organic remedies")
 
@@ -27,7 +27,7 @@ ANALYSIS_PROMPT = """You are an expert agronomist specialized in tropical crops,
 Analyze this crop image carefully and provide a diagnosis.
 Rules:
 - confidence_score must be an integer between 0 and 100
-- If no disease is found, set disease to null and organic_remedies to an empty list
+- If no disease is found, set disease to 'None' and organic_remedies to an empty list
 - Focus on crops common in Kerala: rice, coconut, rubber, banana, pepper, cardamom, tea, arecanut
 - NEVER recommend banned chemicals. Only suggest organic or approved remedies.
 - If you cannot identify the crop or the image is unclear, set species to "Unknown" and confidence_score to a low value.
@@ -47,6 +47,7 @@ async def analyze_crop_image(image_b64: str) -> dict:
         vertexai=True,
         project=project,
         location=location,
+        http_options={'api_version': 'v1beta1'}
     )
 
     import base64
