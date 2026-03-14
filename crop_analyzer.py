@@ -17,8 +17,7 @@ from google.genai import types
 logger = logging.getLogger("agrilive.analyzer")
 
 # Models to try in order of "intelligence" and availability
-# gemini-2.0-flash is currently the most robust/intelligent available in most regions.
-MODELS_TO_TRY = ["gemini-2.0-flash", "gemini-1.5-pro-002", "gemini-1.5-flash-001", "gemini-1.5-pro", "gemini-1.5-flash"]
+MODELS_TO_TRY = ["gemini-2.0-flash-exp", "gemini-2.0-flash", "gemini-1.5-pro-002", "gemini-1.5-flash-001"]
 
 class CropDiagnosis(BaseModel):
     species: str = Field(description="Common name of the plant/crop")
