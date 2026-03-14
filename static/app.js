@@ -743,7 +743,7 @@ function cleanupSession() {
 // ========================================================================
 // Bottom Sheet — Touch Drag
 // ========================================================================
-(function initBottomSheet() {
+(function init() {
     let startY = 0;
     let isDragging = false;
 
@@ -773,4 +773,17 @@ function cleanupSession() {
     sheetHandle.addEventListener("click", () => {
         bottomSheet.classList.toggle("expanded");
     });
+
+    // 2. Action Buttons
+    if (btnStart) btnStart.addEventListener("click", startSession);
+    if (btnStop) btnStop.addEventListener("click", stopSession);
+    if (btnSnapshot) btnSnapshot.addEventListener("click", takeSnapshot);
+    
+    const btnSwitchCam = document.getElementById("btnSwitchCam");
+    if (btnSwitchCam) btnSwitchCam.addEventListener("click", switchCamera);
+    
+    const btnAnalysisClose = document.getElementById("btnAnalysisClose");
+    if (btnAnalysisClose) btnAnalysisClose.addEventListener("click", closeAnalysis);
+
+    console.log("[AgriLive] Event listeners initialized.");
 })();
