@@ -81,9 +81,7 @@ class GeminiLiveClient:
         config = types.LiveConnectConfig(
             response_modalities=["AUDIO"],
             # This must be the specific AudioTranscriptionConfig object
-            output_audio_transcription=types.AudioTranscriptionConfig(
-                model="latest" # Explicitly setting the model helps stability
-            ),
+            output_audio_transcription=types.AudioTranscriptionConfig(),
             system_instruction=types.Content(
                 parts=[types.Part(text=SYSTEM_INSTRUCTION)]
             ),
