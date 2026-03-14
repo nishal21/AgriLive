@@ -85,6 +85,7 @@ async def analyze_crop_image(image_b64: str) -> dict:
 
         # Use response.parsed
         result = response.parsed
+        logger.info("[CropAnalyzer] Raw response text: %s", response.text if hasattr(response, 'text') else "no text")
         
         # FIX: Check if the AI returned None and force the fallback if it did
         if result is None:
