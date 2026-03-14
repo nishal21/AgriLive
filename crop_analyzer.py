@@ -73,7 +73,7 @@ async def analyze_crop_image(image_b64: str) -> dict:
         image_b64 = "".join(image_b64.split())
         image_bytes = base64.b64decode(image_b64)
     except Exception as e:
-        logger.error("[Analyzer] Decode failed: %s", e)
+        logger.error("[CropAnalyzer] Decode failed: %s", e)
         raise
 
     last_error = None
@@ -104,12 +104,11 @@ async def analyze_crop_image(image_b64: str) -> dict:
                 ),
             )
 
-            # 1. Try standard parsing
             result = response.parsed
-            raw_text = response.text if hasattr(response, 'text') else ""
             
-            # 2. Manual fallback if SDK parsing fails
+            # Manual fallback if SDK parsing fails but text is present
             if result is None:
+                raw_text = response.text if hasattr(response, 'text') else ""
                 logger.warning("[CropAnalyzer] SDK parsing failed, trying manual JSON extraction")
                 json_match = re.search(r'\{.*\}', raw_text, re.DOTALL)
                 if json_match:
@@ -123,6 +122,7 @@ async def analyze_crop_image(image_b64: str) -> dict:
                         }
                     except Exception:
                         pass
+                # If manual parsing also fails, or no text, raise an error
                 raise ValueError(f"Model {model_id} returned unparseable result.")
 
             return result.model_dump() if hasattr(result, "model_dump") else result
@@ -139,5 +139,4 @@ async def analyze_crop_image(image_b64: str) -> dict:
         "disease": "Diagnosis currently unavailable",
         "confidence_score": 0,
         "organic_remedies": [],
-        "debug_error": str(last_error)[:100]
     }
