@@ -252,7 +252,7 @@ async function startMicrophone() {
     const source = micAudioCtx.createMediaStreamSource(micStream);
     const actualRate = micAudioCtx.sampleRate;
 
-    const bufferSize = 512;
+    const bufferSize = 4096;
     micProcessor = micAudioCtx.createScriptProcessor(bufferSize, 1, 1);
     micProcessor._audioCtx = micAudioCtx;
 
