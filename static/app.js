@@ -629,16 +629,7 @@ function connectWebSocket() {
 
                     reconnectTimeout = setTimeout(async () => {
                         try {
-                            // FIX 3: Turn off the dead hardware
-                            stopMicrophone();
-                            stopWebcam();
-
                             await connectWebSocket();
-
-                            // FIX 4: Turn on fresh hardware for the new session
-                            await startMicrophone();
-                            await startWebcam();
-
                             addMessage("system", "✅ Reconnected to AgriBot!");
                         } catch (err) {
                             console.error("Reconnect failed:", err);
