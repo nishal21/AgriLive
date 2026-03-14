@@ -76,16 +76,15 @@ class GeminiLiveClient:
     @contextlib.asynccontextmanager
     async def connect(self):
         """Establish the Live API session and yield when ready."""
-        config = types.LiveConnectConfig(
-            # FIX 1: Vertex AI only allows one primary modality. Revert this to AUDIO.
-            response_modalities=["AUDIO"],
-            # FIX 2: Tell the server to transcribe its own voice
-            output_audio_transcription=types.AudioTranscriptionConfig(),
-            system_instruction=types.Content(
-                parts=[types.Part(text=SYSTEM_INSTRUCTION)]
-            ),
-            tools=LIVE_TOOLS,
-        )
+        # FIX: Drop strict types and use a raw dictionary to bypass SDK version crashes
+        config = {
+            "response_modalities": ["AUDIO"],
+            "output_audio_transcription": {},
+            "system_instruction": {
+                "parts": [{"text": SYSTEM_INSTRUCTION}]
+            },
+            "tools": LIVE_TOOLS,
+        }
         async with self._client.aio.live.connect(
             model=MODEL_ID,
             config=config,
