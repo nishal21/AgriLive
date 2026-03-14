@@ -259,11 +259,12 @@ async function startMicrophone() {
     micProcessor.onaudioprocess = (event) => {
         if (!isSessionActive || !ws || ws.readyState !== WebSocket.OPEN) return;
 
-        // FIX: Mute the mic while the AI is speaking to prevent accidental interruptions
-        if (btnStart.classList.contains("speaking")) return;
-
         let inputData = event.inputBuffer.getChannelData(0);
-        if (actualRate !== MIC_SAMPLE_RATE) {
+
+        // FIX 1: Send pure silence if the AI is speaking so Vertex AI doesn't drop us!
+        if (btnStart.classList.contains("speaking")) {
+            inputData = new Float32Array(inputData.length); // Array of zeros
+        } else if (actualRate !== MIC_SAMPLE_RATE) {
             inputData = downsample(inputData, actualRate, MIC_SAMPLE_RATE);
         }
 
@@ -544,6 +545,12 @@ function connectWebSocket() {
 
                     case "turn_complete":
                         console.log("[AgriBot] Turn complete.");
+                        // FIX 2: Force playback to start if it was a short sentence
+                        if (!isPlaybackStarted && audioQueue.length > 0) {
+                            isPlaybackStarted = true;
+                            nextPlayTime = audioContext.currentTime + 0.01;
+                            scheduleNextBuffer();
+                        }
                         break;
 
                     case "ping":
@@ -561,6 +568,9 @@ function connectWebSocket() {
         ws.onclose = (event) => {
             console.log("[WS] Closed:", event.code, event.reason);
             btnStart.classList.remove("listening", "speaking");
+
+            // FIX 3: Nuke the old audio queue so the next session starts fresh
+            flushAudioPlayback();
 
             if (isSessionActive) {
                 // Attempt auto-reconnect
