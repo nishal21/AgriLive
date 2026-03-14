@@ -14,7 +14,7 @@ from google.genai import types
 
 logger = logging.getLogger("agrilive.analyzer")
 
-ANALYSIS_MODEL = "gemini-2.5-flash"
+ANALYSIS_MODEL = "gemini-1.5-pro"
 
 class CropDiagnosis(BaseModel):
     species: str = Field(description="Common name of the plant/crop")
@@ -85,9 +85,28 @@ async def analyze_crop_image(image_b64: str) -> dict:
 
         # Use response.parsed
         result = response.parsed
-        logger.info("[CropAnalyzer] Raw response text: %s", response.text if hasattr(response, 'text') else "no text")
+        raw_text = response.text if hasattr(response, 'text') else ""
+        logger.info("[CropAnalyzer] Raw response text: %s", raw_text)
         
-        # FIX: Check if the AI returned None and force the fallback if it did
+        if result is None:
+            logger.warning("[CropAnalyzer] response.parsed is None, attempting manual JSON parse...")
+            import json
+            import re
+            # Extract JSON if wrapped in markdown blocks
+            json_match = re.search(r'\{.*\}', raw_text, re.DOTALL)
+            if json_match:
+                try:
+                    result_dict = json.loads(json_match.group())
+                    # Validate against model_dump like structure
+                    return {
+                        "species": result_dict.get("species", "Unknown"),
+                        "disease": result_dict.get("disease", "None"),
+                        "confidence_score": result_dict.get("confidence_score", 0),
+                        "organic_remedies": result_dict.get("organic_remedies", [])
+                    }
+                except Exception as e:
+                    logger.error("[CropAnalyzer] Manual parse failed: %s", e)
+
         if result is None:
             raise ValueError("Gemini returned an empty parsed response.")
             
