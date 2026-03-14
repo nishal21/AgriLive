@@ -17,7 +17,7 @@ from google.genai import types
 logger = logging.getLogger("agrilive.analyzer")
 
 # Models to try in order of "intelligence"
-MODELS_TO_TRY = ["gemini-1.5-pro-002", "gemini-1.5-pro", "gemini-1.5-flash"]
+MODELS_TO_TRY = ["gemini-1.5-pro-002", "gemini-1.5-pro", "gemini-1.5-flash-002", "gemini-1.5-flash"]
 
 class CropDiagnosis(BaseModel):
     species: str = Field(description="Common name of the plant/crop")
@@ -44,38 +44,37 @@ async def analyze_crop_image(image_b64: str) -> dict:
     """
     project = os.environ.get("GOOGLE_CLOUD_PROJECT")
     location = os.environ.get("GOOGLE_CLOUD_LOCATION") or "us-central1"
-    
+
     logger.info("[Analyzer] System Check: Project=%s, Location=%s", project, location)
 
+    # Use v1 stable instead of v1beta1 to avoid model mismatch
     try:
-        logger.info("[Analyzer] Initializing genai.Client...")
         client = genai.Client(
             vertexai=True,
             project=project,
-            location=location
+            location=location,
+            http_options={'api_version': 'v1'}
         )
-        logger.info("[Analyzer] Client initialized.")
+        logger.info("[Analyzer] Vertex AI Client (v1) initialized.")
     except Exception as e:
-        logger.error("[Analyzer] CRITICAL: Client init failed: %s", e)
+        logger.error("[Analyzer] Client init failed: %s", e)
         raise
 
     # Strip the base64 prefix if present
     try:
         if "," in image_b64:
             image_b64 = image_b64.split(",")[1]
-        
-        # Strip whitespace/newlines
         image_b64 = "".join(image_b64.split())
         image_bytes = base64.b64decode(image_b64)
-        logger.info("[Analyzer] Base64 decoded. Size: %d bytes", len(image_bytes))
+        logger.info("[Analyzer] Image decoded: %d bytes", len(image_bytes))
     except Exception as e:
-        logger.error("[Analyzer] CRITICAL: Base64 decode failed: %s", e)
+        logger.error("[Analyzer] Decode failed: %s", e)
         raise
 
     last_error = None
     for model_id in MODELS_TO_TRY:
         try:
-            logger.info("[CropAnalyzer] Attempting diagnosis with: %s", model_id)
+            logger.info("[CropAnalyzer] Trying model: %s", model_id)
             response = await client.aio.models.generate_content(
                 model=model_id,
                 contents=[
@@ -100,13 +99,11 @@ async def analyze_crop_image(image_b64: str) -> dict:
                 ),
             )
 
-            # 1. Try standard parsing
             result = response.parsed
             raw_text = response.text if hasattr(response, 'text') else ""
             
-            # 2. Manual fallback if SDK parsing fails
             if result is None:
-                logger.warning("[CropAnalyzer] SDK parsing failed for %s, trying manual JSON extraction", model_id)
+                logger.warning("[CropAnalyzer] SDK parsing failed, trying manual JSON extraction")
                 json_match = re.search(r'\{.*\}', raw_text, re.DOTALL)
                 if json_match:
                     try:
@@ -117,22 +114,31 @@ async def analyze_crop_image(image_b64: str) -> dict:
                             "confidence_score": data.get("confidence_score", 0),
                             "organic_remedies": data.get("organic_remedies", [])
                         }
-                    except Exception as e:
-                        logger.error("[CropAnalyzer] Manual JSON parse failed: %s", e)
-                
-                raise ValueError(f"Model {model_id} returned empty or unparseable result.")
+                    except Exception:
+                        pass
+                raise ValueError(f"Model {model_id} returned unparseable result.")
 
-            if hasattr(result, "model_dump"):
-                return result.model_dump()
-            return result
+            return result.model_dump() if hasattr(result, "model_dump") else result
 
         except Exception as exc:
             logger.warning("[CropAnalyzer] Model %s failed: %s", model_id, exc)
             last_error = exc
-            # If it's a 404 or permission error, proceed to next model
+            
+            # If 404, quickly try the next model
+            if "404" in str(exc) or "NOT_FOUND" in str(exc):
+                continue
+            
+            # If other error, still try fallback
             continue
 
-    # Fallback if both Pro and Flash fail completely
+    # Final Fallback Attempt: List models to log what's actually available
+    try:
+        logger.info("[Analyzer] DISCOVERY: Listing available models in this project...")
+        for m in client.models.list():
+            logger.info("  Available: %s", m.name)
+    except:
+        pass
+
     logger.error("[CropAnalyzer] All analysis tiers failed. Last error: %s", last_error)
     return {
         "species": "Unknown",
