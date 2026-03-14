@@ -182,7 +182,7 @@ async def websocket_endpoint(ws: WebSocket):
                 """Send a keepalive ping every 30 seconds to prevent load balancer timeouts."""
                 try:
                     while True:
-                        await asyncio.sleep(30)
+                        await asyncio.sleep(10)
                         await ws.send_json({"type": "ping"})
                 except asyncio.CancelledError:
                     pass
