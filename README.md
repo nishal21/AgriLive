@@ -45,7 +45,6 @@ AgriLive focuses on **40% UX/UI and Innovation**, transforming the smartphone in
 
 
 ```mermaid
----
 %%{init: {"flowchart": {"curve": "basis"}} }%%
 flowchart TD
     %% ----------------------------------
