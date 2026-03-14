@@ -685,6 +685,7 @@ function cleanupSession() {
         reconnectTimeout = null;
     }
 
+    if (ws) {
         if (window._pingInterval) {
             clearInterval(window._pingInterval);
             window._pingInterval = null;
