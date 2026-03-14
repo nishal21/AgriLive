@@ -36,7 +36,7 @@ AgriLive focuses on **40% UX/UI and Innovation**, transforming the smartphone in
 
 *   **📱 Mobile-First "Field Companion" UI:** An accessible, gesture-driven design featuring a full-bleed camera interface, bottom-sheet transcripts for high readability, and a warm, earthy color palette (**Terracotta, Monsoon Teal, Paddy Green**) to build trust.
 *   **🎙️ Real-Time Voice & Vision:** Powered by `gemini-live-2.5-flash-native-audio` on Vertex AI. AgriLive handles bidirectional WebSocket streaming for zero-latency, empathetic conversational support.
-*   **🔍 Async Crop Analysis Agent:** A dedicated multi-agent endpoint (`/api/analyze`) using `gemini-2.5-flash`. It captures a high-res camera frame and returns a structured JSON diagnosis containing the disease name, confidence score, and organic remedies.
+*   **🔍 Async Crop Analysis Agent:** A dedicated multi-agent endpoint (`/api/analyze`) using `gemini-2.0-flash-exp`. It captures a high-res camera frame and returns a structured JSON diagnosis containing the disease name, confidence score, and organic remedies.
 *   **📡 Live KVK Alerts:** Integrates **Google Search Grounding** to autonomously fetch real-time weather alerts and pest advisories from local **Krishi Vigyan Kendras (KVK)** and official Kerala agriculture portals.
 
 ---
@@ -70,7 +70,7 @@ flowchart LR
         subgraph VertexAI["Vertex AI — Cognitive Layer"]
             direction TB
             LiveAgent@{ label: "LiveAgent\nReal‑time Cognitive Control" }
-            AsyncAgent@{ label: "Crop Analysis Agent\n(gemini‑2.5‑flash)" }
+            AsyncAgent@{ label: "Crop Analysis Agent\n(gemini‑2.0‑flash‑exp)" }
         end
     end
 
@@ -156,7 +156,7 @@ gcloud run deploy agrilive-assistant \
 - **Cloud:** Google Cloud Run, Vertex AI
 - **AI Models:** 
   - `gemini-live-2.5-flash-native-audio` (Live Agent)
-  - `gemini-2.5-flash` (Vision Analysis Agent)
+  - `gemini-2.0-flash-exp` (Vision Analysis Agent)
 - **Features:** Google Search Grounding
 - **Frontend:** Vanilla HTML5, CSS3 (Custom Design System), JavaScript
 
