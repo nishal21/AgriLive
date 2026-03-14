@@ -43,18 +43,34 @@ async def analyze_crop_image(image_b64: str) -> dict:
     Attempts Pro first, then falls back to Flash if restricted or unavailable.
     """
     project = os.environ.get("GOOGLE_CLOUD_PROJECT")
-    location = os.environ.get("GOOGLE_CLOUD_LOCATION")
+    location = os.environ.get("GOOGLE_CLOUD_LOCATION") or "us-central1"
+    
+    logger.info("[Analyzer] System Check: Project=%s, Location=%s", project, location)
 
-    client = genai.Client(
-        vertexai=True,
-        project=project,
-        location=location
-    )
+    try:
+        logger.info("[Analyzer] Initializing genai.Client...")
+        client = genai.Client(
+            vertexai=True,
+            project=project,
+            location=location
+        )
+        logger.info("[Analyzer] Client initialized.")
+    except Exception as e:
+        logger.error("[Analyzer] CRITICAL: Client init failed: %s", e)
+        raise
 
     # Strip the base64 prefix if present
-    if "," in image_b64:
-        image_b64 = image_b64.split(",")[1]
-    image_bytes = base64.b64decode(image_b64)
+    try:
+        if "," in image_b64:
+            image_b64 = image_b64.split(",")[1]
+        
+        # Strip whitespace/newlines
+        image_b64 = "".join(image_b64.split())
+        image_bytes = base64.b64decode(image_b64)
+        logger.info("[Analyzer] Base64 decoded. Size: %d bytes", len(image_bytes))
+    except Exception as e:
+        logger.error("[Analyzer] CRITICAL: Base64 decode failed: %s", e)
+        raise
 
     last_error = None
     for model_id in MODELS_TO_TRY:

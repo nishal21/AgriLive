@@ -77,7 +77,7 @@ async def analyze_crop(req: AnalyzeRequest):
     try:
         logger.info("Received crop analysis request. Image size: %d bytes", len(req.image))
         result = await analyze_crop_image(req.image)
-        logger.info("Analysis result keys: %s", list(result.keys()) if isinstance(result, dict) else "not a dict")
+        logger.info("Analysis COMPLETE. Result: %s", str(result)[:300])
         return result
     except Exception as exc:
         logger.exception("Crop analysis failed: %s", exc)
