@@ -17,7 +17,7 @@
 > "A Gemini Live Agent that diagnoses crop diseases via video and provides real-time, empathetic agricultural guidance in local languages to support farmers in crisis."
 
 ### 📺 Demo Video
-[![AgriLive Demo Placeholder](https://img.shields.io/badge/YouTube-Watch%20Demo-red?style=for-the-badge&logo=youtube)](https://youtu.be/t7M9JGFdyUU)
+[![AgriLive Demo Placeholder](https://img.shields.io/badge/YouTube-Watch%20Demo-red?style=for-the-badge&logo=youtube)](https://www.youtube.com/watch?v=t7M9JGFdyUU)
 
 ---
 
@@ -117,7 +117,7 @@ flowchart TD
 
 
 ### Data Flow & Implementation
-1.  **Frontend:** A Vanilla JS/HTML5 implementation using WebRTC to capture raw **16-bit PCM audio** (16kHz) and **1FPS JPEG frames**. It features robust exponential backoff logic to handle mobile network drops in remote fields.
+1.  **Frontend:** A Vanilla JS/HTML5 implementation using WebRTC to capture raw **16-bit PCM audio** (16kHz) and **1FPS JPEG frames**. Features robust exponential backoff logic for mobile network drops, plus a custom **Walkie-Talkie silence-streaming protocol** and **Jitter Buffer** for smooth, low-latency audio—enabling real-time, interruption-free conversations even on unstable rural networks.
 2.  **Backend:** A high-performance **FastAPI** server containerized with Docker and deployed on **Google Cloud Run**.
 3.  **AI Engine:** Uses the **Google GenAI SDK** to route streams to **Vertex AI**. The server maintains a stateful WebSocket session, handling autonomous tool calls (Search Grounding) and multimodal context.
 
@@ -125,28 +125,34 @@ flowchart TD
 
 ## 🚀 Setup & Deployment
 
+
 ### Local Installation
 1. **Clone & Setup Environment:**
-   ```bash
-   # Create a virtual environment
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+  ```bash
+  # Create a virtual environment
+  python -m venv venv
+  source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-   # Install dependencies
-   pip install -r requirements.txt
-   ```
+  # Install dependencies
+  pip install -r requirements.txt
+  ```
 
 2. **Configure Environment:**
-   Create a `.env` file or set the following:
-   ```bash
-   export GOOGLE_CLOUD_PROJECT="your-project-id"
-   export GOOGLE_CLOUD_LOCATION="us-central1"
-   ```
+  Create a `.env` file or set the following:
+  ```bash
+  export GOOGLE_CLOUD_PROJECT="your-project-id"
+  export GOOGLE_CLOUD_LOCATION="us-central1"
+  ```
 
-3. **Run Locally:**
-   ```bash
-   uvicorn main:app --reload
-   ```
+3. **Authenticate with Google Cloud (Required for Vertex AI):**
+  ```bash
+  gcloud auth application-default login
+  ```
+
+4. **Run Locally:**
+  ```bash
+  uvicorn main:app --reload
+  ```
 
 ### Cloud Run Deployment
 Deploy the assistant to Google Cloud Run with WebSocket support enabled:
