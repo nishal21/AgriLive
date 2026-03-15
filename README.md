@@ -17,7 +17,7 @@
 > "A Gemini Live Agent that diagnoses crop diseases via video and provides real-time, empathetic agricultural guidance in local languages to support farmers in crisis."
 
 ### 📺 Demo Video
-[![AgriLive Demo Placeholder](https://img.shields.io/badge/YouTube-Watch%20Demo-red?style=for-the-badge&logo=youtube)](YOUR_YOUTUBE_LINK_HERE)
+[![AgriLive Demo Placeholder](https://img.shields.io/badge/YouTube-Watch%20Demo-red?style=for-the-badge&logo=youtube)](https://youtu.be/t7M9JGFdyUU)
 
 ---
 
